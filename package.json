@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "postinstall": "prisma skills sync || exit 0"
+  }
+}
