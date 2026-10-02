@@ -14,6 +14,7 @@ model User {
   createdAt DateTime @default(now())
   passwordHash String?
   healthProfile HealthProfile?
+  glucoseReadings GlucoseReading[]
 }
 model HealthProfile {
   id                Int      @id @default(autoincrement())
@@ -30,4 +31,20 @@ model HealthProfile {
   updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model GlucoseReading {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  glucoseValue  Float
+  unit          String   @default("mg/dL")
+  measuredAt    DateTime
+  context       String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, measuredAt])
 }

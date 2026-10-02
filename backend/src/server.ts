@@ -5,6 +5,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { prisma } from "./prisma";
 import * as healthProfileRoutesModule from "./routes/health-profile.routes";
+import glucoseReadingRoutes from "./routes/glucose-reading.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
+
+
+
 
 const healthProfileRoutes =
   (healthProfileRoutesModule as any).healthProfileRoutes ??
@@ -19,7 +24,8 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/health-profile", healthProfileRoutes);
 app.use("/api/auth", authRoutes);
-
+app.use("/api/glucose-readings", glucoseReadingRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "OK",
