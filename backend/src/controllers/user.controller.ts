@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { userService } from "../services/user.service";
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function createUser(
   req: Request,
   res: Response,
@@ -8,20 +12,40 @@ export async function createUser(
   try {
     const { email, name } = req.body;
 
-    if (!email) {
+    // Validate email
+    if (typeof email !== "string" || email.trim() === "") {
       return res.status(400).json({
         message: "Email is required",
       });
     }
 
-    const user = await userService.createUser(email, name);
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        message: "Invalid email format",
+      });
+    }
+
+    // Validate name if provided
+    if (name !== undefined && typeof name !== "string") {
+      return res.status(400).json({
+        message: "Name must be a string",
+      });
+    }
+
+    const user = await userService.createUser(
+      email.trim(),
+      name?.trim(),
+    );
 
     return res.status(201).json(user);
   } catch (error) {
     console.error(error);
 
     return res.status(400).json({
-      message: error instanceof Error ? error.message : "Something went wrong",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
     });
   }
 }
@@ -33,7 +57,7 @@ export async function getUser(
   try {
     const id = Number(req.params.id);
 
-    if (Number.isNaN(id)) {
+    if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({
         message: "Invalid user ID",
       });
@@ -46,7 +70,10 @@ export async function getUser(
     console.error(error);
 
     return res.status(404).json({
-      message: error instanceof Error ? error.message : "User not found",
+      message:
+        error instanceof Error
+          ? error.message
+          : "User not found",
     });
   }
 }

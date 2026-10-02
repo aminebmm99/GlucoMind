@@ -1,3 +1,4 @@
+import userRoutes from "./routes/user.routes";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -9,6 +10,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -34,7 +36,7 @@ app.get("/api/db-health", async (_req, res) => {
     });
   }
 });
-
+app.use("/api/users", userRoutes);
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
