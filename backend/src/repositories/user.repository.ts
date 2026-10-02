@@ -52,3 +52,10 @@ export async function getUserByEmail(email: string) {
     },
   });
 }
+export async function deleteUser(id: number) {
+  return prisma.user.delete({
+    where: {
+      id,
+    },
+  });
+}

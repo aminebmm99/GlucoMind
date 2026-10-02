@@ -56,3 +56,21 @@ export async function updateUser(
 
   return userRepository.update(id, data.name);
 }
+export async function deleteUser(id: number) {
+  const existingUser = await userRepository.findById(id);
+
+  if (!existingUser) {
+    throw new Error("User not found");
+  }
+
+  const deleteUserFn =
+    (userRepository as any).deleteUser ??
+    (userRepository as any).delete ??
+    (userRepository as any).remove;
+
+  if (typeof deleteUserFn !== "function") {
+    throw new Error("User repository does not support deleting users");
+  }
+
+  return deleteUserFn.call(userRepository, id);
+}

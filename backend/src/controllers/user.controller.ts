@@ -136,3 +136,30 @@ export async function updateUser(
     });
   }
 }
+export async function deleteUser(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({
+        message: "Invalid user ID",
+      });
+    }
+
+    await (userService as any).deleteUser?.(id);
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+
+    return res.status(404).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "User not found",
+    });
+  }
+}
