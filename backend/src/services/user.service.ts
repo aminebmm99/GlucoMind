@@ -1,4 +1,9 @@
-import { userRepository } from "../repositories/user.repository";
+import * as userRepositoryModule from "../repositories/user.repository";
+
+const userRepository =
+  (userRepositoryModule as any).userRepository ??
+  (userRepositoryModule as any).default ??
+  userRepositoryModule;
 
 export const userService = {
   async createUser(email: string, name?: string) {
