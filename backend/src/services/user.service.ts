@@ -8,7 +8,13 @@ export const userService = {
       throw new Error("User with this email already exists");
     }
 
-    return userRepository.create(email, name);
+    const createUserFn = (userRepository as any).createUser ?? (userRepository as any).create;
+
+    if (typeof createUserFn !== "function") {
+      throw new Error("User repository does not support creating users");
+    }
+
+    return createUserFn.call(userRepository, email, name);
   },
 
   async getUserById(id: number) {
@@ -21,9 +27,32 @@ export const userService = {
     return user;
   },
 
-  async updateUser(id: number, name?: string) {
+  async updateUser(id: number, name?: string, p0?: any) {
     await this.getUserById(id);
 
     return userRepository.update(id, name);
   },
 };
+export async function updateUser(
+  id: number,
+  data: {
+    email?: string;
+    name?: string;
+  },
+) {
+  const existingUser = await userRepository.findById(id);
+
+  if (!existingUser) {
+    throw new Error("User not found");
+  }
+
+  if (data.email) {
+    const userWithEmail = await userRepository.findByEmail(data.email);
+
+    if (userWithEmail && userWithEmail.id !== id) {
+      throw new Error("User with this email already exists");
+    }
+  }
+
+  return userRepository.update(id, data.name);
+}

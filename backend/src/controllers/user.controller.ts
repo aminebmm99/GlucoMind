@@ -77,3 +77,62 @@ export async function getUser(
     });
   }
 }
+export async function updateUser(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({
+        message: "Invalid user ID",
+      });
+    }
+
+    const { email, name } = req.body;
+
+    if (email === undefined && name === undefined) {
+      return res.status(400).json({
+        message: "At least one field is required",
+      });
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || email.trim() === "") {
+        return res.status(400).json({
+          message: "Email must be a valid string",
+        });
+      }
+
+      if (!isValidEmail(email)) {
+        return res.status(400).json({
+          message: "Invalid email format",
+        });
+      }
+    }
+
+    if (name !== undefined && typeof name !== "string") {
+      return res.status(400).json({
+        message: "Name must be a string",
+      });
+    }
+
+    const user = await userService.updateUser(
+      id,
+      email !== undefined ? email.trim() : undefined,
+      name !== undefined ? name.trim() : undefined,
+    );
+
+    return res.json(user);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
+    });
+  }
+}
