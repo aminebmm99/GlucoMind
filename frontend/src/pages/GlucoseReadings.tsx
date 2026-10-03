@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { Activity, CalendarDays, Plus, ShieldCheck } from "lucide-react";
 import {
   createGlucoseReading,
   deleteGlucoseReading,
@@ -6,6 +7,9 @@ import {
   updateGlucoseReading,
 } from "../services/glucose-reading.service";
 import type { GlucoseReading } from "../types/api";
+import ReadingTrace from "../components/ReadingTrace";
+
+const ImmersiveScene = lazy(() => import("../components/ImmersiveScene"));
 
 function getLocalDateTime() {
   const now = new Date();
@@ -184,13 +188,22 @@ export default function GlucoseReadings() {
   return (
     <main className="page-content">
       <header className="page-heading">
-        <div><p className="eyebrow">YOUR PERSONAL LOG</p><h1>Glucose readings</h1><p className="page-subtitle">Record a measurement and keep your history in one place.</p></div>
+        <div><p className="eyebrow"><span className="eyebrow-pulse" /> GLUCOMIND / YOUR PERSONAL LOG</p><h1>Every reading, <em>in context.</em></h1><p className="page-subtitle">Measurements you record, gathered into one living timeline.</p></div>
+        <a className="button button-primary readings-jump" href="#reading-entry"><Plus aria-hidden="true" /> Add reading</a>
       </header>
+
+      <section className="readings-hero" aria-label="Your glucose timeline">
+        <div className="readings-hero-scene"><Suspense fallback={<div className="command-scene-fallback" />}><ImmersiveScene readings={readings} variant="dashboard" /></Suspense></div>
+        <div className="readings-hero-top"><span><Activity aria-hidden="true" /> RECORDED SIGNAL</span><span><ShieldCheck aria-hidden="true" /> PRIVATE TO YOU</span></div>
+        <div className="readings-hero-copy"><span className="stage-overline">YOUR HISTORY</span><h2>{readings.length.toString().padStart(2, "0")}<span> / entries</span></h2><p>Ordered by when each measurement was taken.</p></div>
+        {readings.length > 0 ? <ReadingTrace readings={readings} /> : <div className="readings-empty-trace"><span>YOUR FIRST MEASUREMENT WILL APPEAR HERE</span><span className="empty-trace-line" /></div>}
+        <div className="readings-hero-foot"><CalendarDays aria-hidden="true" /> Chronological record <span>·</span> Units remain as recorded</div>
+      </section>
 
       {error && <div className="notice notice-error" role="alert"><span aria-hidden="true">!</span>{error}</div>}
       {success && <div className="notice notice-success" role="status"><span aria-hidden="true">✓</span>{success}<button className="notice-dismiss" type="button" onClick={() => setSuccess("")} aria-label="Dismiss message">×</button></div>}
 
-      <section className="panel form-panel">
+      <section className="panel form-panel" id="reading-entry">
         <div className="section-heading form-heading">
           <div><p className="eyebrow">{editingId !== null ? "UPDATE YOUR LOG" : "QUICK ENTRY"}</p><h2>{editingId !== null ? "Edit reading" : "Add a reading"}</h2><p className="section-description">Fields marked with <span aria-hidden="true">*</span> are required.</p></div>
           {editingId !== null && <span className="editing-pill">Editing</span>}

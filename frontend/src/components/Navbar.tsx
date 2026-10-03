@@ -1,5 +1,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Activity, LayoutDashboard, LockKeyhole, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import BrandMark from "./BrandMark";
 
 export default function Navbar() {
   const { logout } = useAuth();
@@ -14,33 +16,26 @@ export default function Navbar() {
     <header className="topbar">
       <div className="topbar-inner">
         <Link className="brand" to="/dashboard" aria-label="GlucoMind home">
-          <span className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M16 4.5v23M4.5 16h23" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="16" cy="16" r="12.5" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </span>
-          <span>Gluco<span className="brand-accent">Mind</span></span>
+          <BrandMark />
         </Link>
 
         <nav className="primary-nav" aria-label="Main navigation">
           <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            Overview
+            <LayoutDashboard aria-hidden="true" /> Overview
           </NavLink>
           <NavLink to="/readings" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            Readings
+            <Activity aria-hidden="true" /> Readings
           </NavLink>
           <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            Health profile
+            <UserRound aria-hidden="true" /> Health profile
           </NavLink>
         </nav>
 
         <button className="logout-button" type="button" onClick={handleLogout}>
-          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
-            <path d="M8 3H4.5A1.5 1.5 0 0 0 3 4.5v11A1.5 1.5 0 0 0 4.5 17H8m3-3 4-4-4-4m4 4H7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <LogOut aria-hidden="true" />
           <span>Sign out</span>
         </button>
+        <span className="nav-health-status"><LockKeyhole aria-hidden="true" /> Private workspace</span>
       </div>
     </header>
   );

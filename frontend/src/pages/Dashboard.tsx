@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Activity, ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, ShieldCheck } from "lucide-react";
 import {
   Line,
   LineChart,
@@ -21,6 +22,8 @@ import type {
   DashboardAnalytics,
   GlucoseReading,
 } from "../types/api";
+
+const ImmersiveScene = lazy(() => import("../components/ImmersiveScene"));
 
 export default function Dashboard() {
   const [summary, setSummary] =
@@ -129,14 +132,25 @@ export default function Dashboard() {
     <main className="page-content">
       <header className="page-heading dashboard-heading">
         <div>
-          <p className="eyebrow">YOUR HEALTH, IN VIEW</p>
-          <h1>Your glucose overview</h1>
-          <p className="page-subtitle">A clear look at the readings you’ve recorded.</p>
+          <p className="eyebrow"><span className="eyebrow-pulse" /> GLUCOMIND / PERSONAL HEALTH INTELLIGENCE</p>
+          <h1>Your health, <em>in perspective.</em></h1>
+          <p className="page-subtitle">A living view of the measurements you’ve chosen to record.</p>
         </div>
-        <Link className="button button-primary" to="/readings">
-          <span className="button-plus" aria-hidden="true">＋</span> Add a reading
+        <Link className="button button-primary dashboard-add" to="/readings">
+          <span className="button-plus" aria-hidden="true">＋</span> Record a reading
         </Link>
       </header>
+
+      <section className="command-stage" aria-labelledby="command-stage-title" aria-describedby="command-stage-description">
+        <div className="command-stage-scene" aria-hidden="true"><Suspense fallback={<div className="command-scene-fallback" />}><ImmersiveScene readings={readings} variant="dashboard" /></Suspense></div>
+        <div className="stage-topline"><span><Activity aria-hidden="true" /> FROM YOUR READING HISTORY</span><span><span className="stage-status-dot" /> PERSONAL DATA</span></div>
+        <div className="stage-copy"><p className="stage-overline">YOUR RECENT SIGNAL</p><h2 id="command-stage-title">{analytics?.readingCount ?? readings.length}<span> measurements</span></h2><p id="command-stage-description">{analytics?.periodLabel ?? "Selected period"} <span className="stage-divider">/</span> {analytics?.readingCount ? "Readings shown from your real recorded data" : "Add measurements to shape your timeline"}</p></div>
+        <div className="stage-side-note"><span className="stage-note-icon"><Clock3 aria-hidden="true" /></span><span>RECENT<br />READINGS</span></div>
+        <div className="stage-bottomline"><span>LOWER READING</span><span>RECORDED GLUCOSE / mg/dL</span><span>HIGHER READING</span></div>
+        <div className="stage-metric-float"><span className="float-label">PERIOD AVERAGE <span>· {analytics?.periodLabel ?? ""}</span></span><strong>{analytics?.average === null || analytics?.average === undefined ? "—" : analytics.average.toFixed(1)}<small> mg/dL</small></strong><span className="float-foot"><span className="float-trend-icon">{analytics?.trend === "INCREASING" ? <ArrowUpRight /> : analytics?.trend === "DECREASING" ? <ArrowDownRight /> : analytics?.trend === "STABLE" ? <Activity /> : <CircleHelp />}</span>{analytics?.trend.replaceAll("_", " ").toLowerCase() ?? "waiting for data"}</span></div>
+        <p className="stage-access-note"><ShieldCheck aria-hidden="true" /> Personal readings only</p>
+        <p className="visually-hidden" aria-live="polite">{analytics?.readingCount ?? readings.length} readings in this period. Average {analytics?.average === null || analytics?.average === undefined ? "not available" : `${analytics.average.toFixed(1)} mg/dL`}. Trend {analytics?.trend.replaceAll("_", " ").toLowerCase() ?? "unavailable"}.</p>
+      </section>
 
       <section className="metric-grid" aria-label="Glucose summary">
         <article className="panel metric-card metric-total">
@@ -217,7 +231,7 @@ export default function Dashboard() {
           </div>
         ) : analytics ? (
           <>
-            <div className="metric-grid" aria-label="Selected period metrics">
+            <div className="metric-grid" role="group" aria-label="Selected period metrics">
               <article className="panel metric-card metric-average">
                 <div className="metric-topline"><span className="metric-icon" aria-hidden="true">∿</span><span className="metric-label">Average glucose</span></div>
                 <p className="metric-value">{analytics.average === null ? "—" : analytics.average.toFixed(1)}<span className="metric-unit"> mg/dL</span></p>
@@ -234,9 +248,9 @@ export default function Dashboard() {
                 <p className="metric-caption">In selected period</p>
               </article>
               <article className="panel metric-card metric-high">
-                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">◎</span><span className="metric-label">Time in range</span></div>
+                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">◎</span><span className="metric-label">Readings in range</span></div>
                 <p className="metric-value">{analytics.timeInRange === null ? "—" : `${analytics.timeInRange.toFixed(1)}%`}</p>
-                <p className="metric-caption">{analytics.targetRange ? `${analytics.inTarget} in · ${analytics.belowTarget} below · ${analytics.aboveTarget} above` : "Configure a target range in your profile"}</p>
+                <p className="metric-caption">{analytics.targetRange ? `${analytics.inTarget} of ${analytics.readingCount} readings within target` : "Configure a target range in your profile"}</p>
               </article>
             </div>
 
@@ -247,7 +261,7 @@ export default function Dashboard() {
             <div className="section-description">
               <strong>Previous period:</strong>{" "}
               {analytics.comparison
-                ? `${analytics.comparison.previousPeriodLabel}: ${analytics.comparison.previousReadingCount} readings; count change ${analytics.comparison.readingCountChange > 0 ? "+" : ""}${analytics.comparison.readingCountChange}${analytics.comparison.averageChange === null ? "" : `; average change ${analytics.comparison.averageChange > 0 ? "+" : ""}${analytics.comparison.averageChange.toFixed(1)} mg/dL`}${analytics.comparison.timeInRangeChange === null ? "" : `; time-in-range change ${analytics.comparison.timeInRangeChange > 0 ? "+" : ""}${analytics.comparison.timeInRangeChange.toFixed(1)} percentage points`}`
+                ? `${analytics.comparison.previousPeriodLabel}: ${analytics.comparison.previousReadingCount} readings; count change ${analytics.comparison.readingCountChange > 0 ? "+" : ""}${analytics.comparison.readingCountChange}${analytics.comparison.averageChange === null ? "" : `; average change ${analytics.comparison.averageChange > 0 ? "+" : ""}${analytics.comparison.averageChange.toFixed(1)} mg/dL`}${analytics.comparison.timeInRangeChange === null ? "" : `; within-target reading share change ${analytics.comparison.timeInRangeChange > 0 ? "+" : ""}${analytics.comparison.timeInRangeChange.toFixed(1)} percentage points`}`
                 : "not enough previous-period readings to compare"}
             </div>
 
@@ -256,7 +270,7 @@ export default function Dashboard() {
                 <li className="reading-item" key={insight.id}>
                   <div className="reading-main">
                     <strong>{insight.title}</strong>
-                    <p className="reading-notes">{insight.description}</p>
+                    <p className="reading-notes">{insight.description.replace(/time in range/gi, "readings within target range")}</p>
                   </div>
                 </li>
               ))}

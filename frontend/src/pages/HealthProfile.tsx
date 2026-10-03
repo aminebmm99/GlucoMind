@@ -1,9 +1,12 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { lazy, Suspense, type FormEvent, useEffect, useState } from "react";
+import { Activity, CalendarDays, Ruler, ShieldCheck, Target, Weight } from "lucide-react";
 import {
   createHealthProfile,
   getHealthProfile,
   updateHealthProfile,
 } from "../services/health-profile.service";
+
+const ImmersiveScene = lazy(() => import("../components/ImmersiveScene"));
 
 export default function HealthProfile() {
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -183,7 +186,20 @@ export default function HealthProfile() {
 
   return (
     <main className="page-content profile-page">
-      <header className="page-heading"><div><p className="eyebrow">YOUR DETAILS</p><h1>Health profile</h1><p className="page-subtitle">Keep your personal health details together and update them whenever you need.</p></div></header>
+      <header className="page-heading"><div><p className="eyebrow"><span className="eyebrow-pulse" /> GLUCOMIND / YOUR BASELINE</p><h1>Your profile, <em>your context.</em></h1><p className="page-subtitle">Personal details that help put your glucose history in perspective.</p></div></header>
+
+      <section className="profile-identity-stage" aria-label="Personal profile overview">
+        <div className="profile-stage-scene"><Suspense fallback={<div className="command-scene-fallback" />}><ImmersiveScene variant="profile" /></Suspense></div>
+        <div className="profile-stage-heading"><span className="stage-overline">PERSONAL HEALTH PROFILE</span><span className="profile-privacy"><ShieldCheck aria-hidden="true" /> YOUR INFORMATION</span></div>
+        <div className="profile-overview-copy"><div className="profile-monogram" aria-hidden="true">G<span>·</span></div><div><h2>Your health context</h2><p>Details below are saved to your private profile and can be updated at any time.</p></div></div>
+        <div className="profile-facts">
+          <div><CalendarDays aria-hidden="true" /><span>DIAGNOSIS</span><strong>{diagnosisDate ? new Date(`${diagnosisDate}T12:00:00`).toLocaleDateString([], { month: "short", year: "numeric" }) : "Not added"}</strong></div>
+          <div><Ruler aria-hidden="true" /><span>HEIGHT</span><strong>{height ? `${height} cm` : "Not added"}</strong></div>
+          <div><Weight aria-hidden="true" /><span>WEIGHT</span><strong>{weight ? `${weight} kg` : "Not added"}</strong></div>
+          <div><Target aria-hidden="true" /><span>PERSONAL TARGET</span><strong>{targetGlucoseMin && targetGlucoseMax ? `${targetGlucoseMin}–${targetGlucoseMax} mg/dL` : "Not configured"}</strong></div>
+        </div>
+        <div className="profile-stage-foot"><Activity aria-hidden="true" /> A PERSONAL BASELINE <span>·</span> NOT A DIAGNOSIS</div>
+      </section>
 
       {message && <div className="notice notice-success" role="status"><span aria-hidden="true">✓</span>{message}</div>}
       {error && <div className="notice notice-error" role="alert"><span aria-hidden="true">!</span>{error}</div>}
