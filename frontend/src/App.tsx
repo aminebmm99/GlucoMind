@@ -1,6 +1,16 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import GlucoseReadings from "./pages/GlucoseReadings";
+import HealthProfile from "./pages/HealthProfile";
+import Navbar from "./components/Navbar";
+
 import { useAuth } from "./context/AuthContext";
 
 function App() {
@@ -8,7 +18,10 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
+      <div className="app-shell">
+        {isAuthenticated && <Navbar />}
+
+        <Routes>
         <Route
           path="/login"
           element={
@@ -32,6 +45,28 @@ function App() {
         />
 
         <Route
+          path="/readings"
+          element={
+            isAuthenticated ? (
+              <GlucoseReadings />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <HealthProfile />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route
           path="*"
           element={
             <Navigate
@@ -44,7 +79,8 @@ function App() {
             />
           }
         />
-      </Routes>
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
