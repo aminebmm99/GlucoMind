@@ -11,12 +11,14 @@ import {
 } from "recharts";
 
 import {
+  getDashboardAnalytics,
   getDashboardSummary,
   getDashboardPeriod,
 } from "../services/dashboard.service";
 
 import type {
   DashboardSummary,
+  DashboardAnalytics,
   GlucoseReading,
 } from "../types/api";
 
@@ -27,10 +29,14 @@ export default function Dashboard() {
   const [readings, setReadings] =
     useState<GlucoseReading[]>([]);
 
-  const [period, setPeriod] =
-    useState<"today" | "7d" | "30d">("7d");
+  const [analytics, setAnalytics] =
+    useState<DashboardAnalytics | null>(null);
+
+  const [period, setPeriod] = useState<"today" | "7d" | "14d" | "30d">("7d");
 
   const [loading, setLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
 
@@ -38,21 +44,39 @@ export default function Dashboard() {
     async function loadDashboard() {
       try {
         setLoading(true);
+        setAnalyticsLoading(true);
         setError("");
+        setAnalyticsError("");
 
-        const [summaryData, periodData] =
-          await Promise.all([
+        const [summaryResult, periodResult, analyticsResult] =
+          await Promise.allSettled([
             getDashboardSummary(),
             getDashboardPeriod(period),
+            getDashboardAnalytics(period),
           ]);
 
-        setSummary(summaryData);
-        setReadings(periodData.readings);
+        if (summaryResult.status === "rejected") {
+          throw summaryResult.reason;
+        }
+        if (periodResult.status === "rejected") {
+          throw periodResult.reason;
+        }
+
+        setSummary(summaryResult.value);
+        setReadings(periodResult.value.readings);
+
+        if (analyticsResult.status === "fulfilled") {
+          setAnalytics(analyticsResult.value);
+        } else {
+          console.error(analyticsResult.reason);
+          setAnalyticsError("Analytics are temporarily unavailable.");
+        }
       } catch (error) {
         console.error(error);
         setError("Failed to load dashboard");
       } finally {
         setLoading(false);
+        setAnalyticsLoading(false);
       }
     }
 
@@ -97,8 +121,8 @@ export default function Dashboard() {
       day: "numeric",
     }),
     time: new Date(reading.measuredAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-    glucose: reading.glucoseValue,
-    unit: reading.unit,
+    glucose: reading.unit === "mmol/L" ? reading.glucoseValue * 18.0182 : reading.glucoseValue,
+    unit: "mg/dL",
   }));
 
   return (
@@ -127,12 +151,12 @@ export default function Dashboard() {
         </article>
         <article className="panel metric-card metric-low">
           <div className="metric-topline"><span className="metric-icon" aria-hidden="true">↓</span><span className="metric-label">Lowest</span></div>
-          <p className="metric-value">{summary?.minimumGlucose ?? "—"}<span className="metric-unit"> mg/dL</span></p>
+          <p className="metric-value">{summary?.minimumGlucose !== null && summary?.minimumGlucose !== undefined ? summary.minimumGlucose.toFixed(1) : "—"}<span className="metric-unit"> mg/dL</span></p>
           <p className="metric-caption">Lowest recorded measurement</p>
         </article>
         <article className="panel metric-card metric-high">
           <div className="metric-topline"><span className="metric-icon" aria-hidden="true">↑</span><span className="metric-label">Highest</span></div>
-          <p className="metric-value">{summary?.maximumGlucose ?? "—"}<span className="metric-unit"> mg/dL</span></p>
+          <p className="metric-value">{summary?.maximumGlucose !== null && summary?.maximumGlucose !== undefined ? summary.maximumGlucose.toFixed(1) : "—"}<span className="metric-unit"> mg/dL</span></p>
           <p className="metric-caption">Highest recorded measurement</p>
         </article>
       </section>
@@ -145,9 +169,10 @@ export default function Dashboard() {
             <p className="section-description">Explore how your readings have changed over time.</p>
           </div>
           <label className="visually-hidden" htmlFor="period">Choose a time period</label>
-          <select id="period" className="period-select" value={period} onChange={(event) => setPeriod(event.target.value as "today" | "7d" | "30d")}>
+          <select id="period" className="period-select" value={period} onChange={(event) => setPeriod(event.target.value as "today" | "7d" | "14d" | "30d")}>
             <option value="today">Today</option>
             <option value="7d">Last 7 days</option>
+            <option value="14d">Last 14 days</option>
             <option value="30d">Last 30 days</option>
           </select>
         </div>
@@ -160,7 +185,7 @@ export default function Dashboard() {
             <Link className="text-link" to="/readings">Go to readings <span aria-hidden="true">→</span></Link>
           </div>
         ) : (
-          <div className="chart-wrap" role="img" aria-label={`Glucose readings for ${period === "today" ? "today" : period === "7d" ? "the last 7 days" : "the last 30 days"}`}>
+          <div className="chart-wrap" role="img" aria-label={`Glucose readings for ${period === "today" ? "today" : `the last ${period.slice(0, -1)} days`}`}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 16, right: 14, bottom: 4, left: -10 }}>
                 <CartesianGrid stroke="#e8eeeb" strokeDasharray="4 5" vertical={false} />
@@ -172,6 +197,73 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         )}
+      </section>
+
+      <section className="panel chart-panel" aria-labelledby="analytics-title">
+        <div className="section-heading chart-heading">
+          <div>
+            <p className="eyebrow">PERSONAL ANALYTICS</p>
+            <h2 id="analytics-title">{analytics?.periodLabel ?? "Period analytics"}</h2>
+            <p className="section-description">Summaries use mg/dL; mmol/L readings are converted to the same unit.</p>
+          </div>
+        </div>
+
+        {analyticsLoading ? (
+          <p role="status">Loading period analytics…</p>
+        ) : analyticsError ? (
+          <div className="notice notice-error" role="alert">
+            <span aria-hidden="true">!</span>{analyticsError}
+            <button className="button button-secondary" type="button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button>
+          </div>
+        ) : analytics ? (
+          <>
+            <div className="metric-grid" aria-label="Selected period metrics">
+              <article className="panel metric-card metric-average">
+                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">∿</span><span className="metric-label">Average glucose</span></div>
+                <p className="metric-value">{analytics.average === null ? "—" : analytics.average.toFixed(1)}<span className="metric-unit"> mg/dL</span></p>
+                <p className="metric-caption">{analytics.periodLabel}</p>
+              </article>
+              <article className="panel metric-card metric-low">
+                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">↕</span><span className="metric-label">Minimum / maximum</span></div>
+                <p className="metric-value">{analytics.minimum === null || analytics.maximum === null ? "—" : `${analytics.minimum.toFixed(1)}–${analytics.maximum.toFixed(1)}`}<span className="metric-unit"> mg/dL</span></p>
+                <p className="metric-caption">Recorded range</p>
+              </article>
+              <article className="panel metric-card metric-total">
+                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">↗</span><span className="metric-label">Readings</span></div>
+                <p className="metric-value">{analytics.readingCount}</p>
+                <p className="metric-caption">In selected period</p>
+              </article>
+              <article className="panel metric-card metric-high">
+                <div className="metric-topline"><span className="metric-icon" aria-hidden="true">◎</span><span className="metric-label">Time in range</span></div>
+                <p className="metric-value">{analytics.timeInRange === null ? "—" : `${analytics.timeInRange.toFixed(1)}%`}</p>
+                <p className="metric-caption">{analytics.targetRange ? `${analytics.inTarget} in · ${analytics.belowTarget} below · ${analytics.aboveTarget} above` : "Configure a target range in your profile"}</p>
+              </article>
+            </div>
+
+            <div className="section-description">
+              <strong>Trend:</strong> {analytics.trend.replaceAll("_", " ").toLowerCase()}
+              {analytics.trendChange !== null && ` (${analytics.trendChange > 0 ? "+" : ""}${analytics.trendChange.toFixed(1)} mg/dL across the period halves)`}
+            </div>
+            <div className="section-description">
+              <strong>Previous period:</strong>{" "}
+              {analytics.comparison
+                ? `${analytics.comparison.previousPeriodLabel}: ${analytics.comparison.previousReadingCount} readings; count change ${analytics.comparison.readingCountChange > 0 ? "+" : ""}${analytics.comparison.readingCountChange}${analytics.comparison.averageChange === null ? "" : `; average change ${analytics.comparison.averageChange > 0 ? "+" : ""}${analytics.comparison.averageChange.toFixed(1)} mg/dL`}${analytics.comparison.timeInRangeChange === null ? "" : `; time-in-range change ${analytics.comparison.timeInRangeChange > 0 ? "+" : ""}${analytics.comparison.timeInRangeChange.toFixed(1)} percentage points`}`
+                : "not enough previous-period readings to compare"}
+            </div>
+
+            <ul className="reading-list" aria-label="Personalized insights">
+              {analytics.insights.map((insight) => (
+                <li className="reading-item" key={insight.id}>
+                  <div className="reading-main">
+                    <strong>{insight.title}</strong>
+                    <p className="reading-notes">{insight.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="section-description">{analytics.disclaimer}</p>
+          </>
+        ) : null}
       </section>
 
       <section className="panel latest-panel">

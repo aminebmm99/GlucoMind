@@ -13,8 +13,8 @@ export interface UpdateGlucoseReadingData {
   glucoseValue?: number;
   unit?: string;
   measuredAt?: string;
-  context?: string;
-  notes?: string;
+  context?: string | null;
+  notes?: string | null;
 }
 
 export async function getGlucoseReadings(): Promise<

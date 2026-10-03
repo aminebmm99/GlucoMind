@@ -79,7 +79,6 @@ export default function HealthProfile() {
 
         setExists(true);
       } catch (error) {
-        console.error(error);
         const status = typeof error === "object" && error !== null && "response" in error
           ? (error.response as { status?: number }).status
           : undefined;
@@ -87,6 +86,7 @@ export default function HealthProfile() {
           setExists(false);
           setLoadError("");
         } else {
+          console.error(error);
           setLoadError("We couldn’t load your health profile. Please try again.");
         }
       } finally {
@@ -101,6 +101,35 @@ export default function HealthProfile() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (dateOfBirth && dateOfBirth > today) {
+      setMessage("");
+      setError("Date of birth cannot be in the future.");
+      return;
+    }
+
+    if (diagnosisDate && diagnosisDate > today) {
+      setMessage("");
+      setError("Diagnosis date cannot be in the future.");
+      return;
+    }
+
+    if (dateOfBirth && diagnosisDate && diagnosisDate < dateOfBirth) {
+      setMessage("");
+      setError("Diagnosis date cannot be before date of birth.");
+      return;
+    }
+
+    if (
+      targetGlucoseMin &&
+      targetGlucoseMax &&
+      Number(targetGlucoseMin) > Number(targetGlucoseMax)
+    ) {
+      setMessage("");
+      setError("Lower glucose target cannot exceed the upper target.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -108,26 +137,14 @@ export default function HealthProfile() {
       setMessage("");
 
       const data = {
-        dateOfBirth: dateOfBirth || undefined,
-        gender: gender || undefined,
-        height: height
-          ? Number(height)
-          : undefined,
-        weight: weight
-          ? Number(weight)
-          : undefined,
-        diabetesType:
-          diabetesType || undefined,
-        diagnosisDate:
-          diagnosisDate || undefined,
-        targetGlucoseMin:
-          targetGlucoseMin
-            ? Number(targetGlucoseMin)
-            : undefined,
-        targetGlucoseMax:
-          targetGlucoseMax
-            ? Number(targetGlucoseMax)
-            : undefined,
+        dateOfBirth: dateOfBirth || null,
+        gender: gender || null,
+        height: height ? Number(height) : null,
+        weight: weight ? Number(weight) : null,
+        diabetesType: diabetesType || null,
+        diagnosisDate: diagnosisDate || null,
+        targetGlucoseMin: targetGlucoseMin ? Number(targetGlucoseMin) : null,
+        targetGlucoseMax: targetGlucoseMax ? Number(targetGlucoseMax) : null,
       };
 
       if (exists) {
@@ -175,7 +192,7 @@ export default function HealthProfile() {
         <section className="profile-section">
           <div className="profile-section-heading"><span className="profile-section-icon" aria-hidden="true">01</span><div><h2>About you</h2><p>Basic details to personalize your health profile.</p></div></div>
           <div className="profile-fields">
-            <div className="field-group"><label htmlFor="dateOfBirth">Date of birth</label><input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} /></div>
+            <div className="field-group"><label htmlFor="dateOfBirth">Date of birth</label><input id="dateOfBirth" type="date" max={new Date().toISOString().slice(0, 10)} value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} /></div>
             <div className="field-group"><label htmlFor="gender">Gender</label><select id="gender" value={gender} onChange={(event) => setGender(event.target.value)}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option><option value="PREFER_NOT_TO_SAY">Prefer not to say</option></select></div>
             <div className="field-group"><label htmlFor="height">Height <span className="field-unit">cm</span></label><input id="height" type="number" min="1" step="0.1" placeholder="e.g. 170" value={height} onChange={(event) => setHeight(event.target.value)} /></div>
             <div className="field-group"><label htmlFor="weight">Weight <span className="field-unit">kg</span></label><input id="weight" type="number" min="1" step="0.1" placeholder="e.g. 68" value={weight} onChange={(event) => setWeight(event.target.value)} /></div>
@@ -186,7 +203,7 @@ export default function HealthProfile() {
           <div className="profile-section-heading"><span className="profile-section-icon" aria-hidden="true">02</span><div><h2>Diabetes details</h2><p>These fields are optional and can be changed at any time.</p></div></div>
           <div className="profile-fields">
             <div className="field-group"><label htmlFor="diabetesType">Diabetes type</label><select id="diabetesType" value={diabetesType} onChange={(event) => setDiabetesType(event.target.value)}><option value="">Select type</option><option value="TYPE_1">Type 1</option><option value="TYPE_2">Type 2</option><option value="GESTATIONAL">Gestational</option><option value="OTHER">Other</option></select></div>
-            <div className="field-group"><label htmlFor="diagnosisDate">Diagnosis date</label><input id="diagnosisDate" type="date" value={diagnosisDate} onChange={(event) => setDiagnosisDate(event.target.value)} /></div>
+            <div className="field-group"><label htmlFor="diagnosisDate">Diagnosis date</label><input id="diagnosisDate" type="date" max={new Date().toISOString().slice(0, 10)} value={diagnosisDate} onChange={(event) => setDiagnosisDate(event.target.value)} /></div>
           </div>
         </section>
 

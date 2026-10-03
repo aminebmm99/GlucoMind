@@ -16,6 +16,14 @@ function parseDate(value: unknown): Date {
   return date;
 }
 
+function parseBody(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Request body must be a JSON object");
+  }
+
+  return value as Record<string, unknown>;
+}
+
 function parseGlucoseValue(value: unknown): number {
   const glucoseValue = Number(value);
 
@@ -32,6 +40,18 @@ function parseGlucoseValue(value: unknown): number {
 }
 
 function parseCreateData(body: Record<string, unknown>) {
+  if (body.unit !== undefined && typeof body.unit !== "string") {
+    throw new Error("Invalid glucose unit");
+  }
+
+  if (body.context !== undefined && body.context !== null && typeof body.context !== "string") {
+    throw new Error("Invalid glucose context");
+  }
+
+  if (body.notes !== undefined && body.notes !== null && typeof body.notes !== "string") {
+    throw new Error("Invalid notes");
+  }
+
   return {
     glucoseValue: parseGlucoseValue(body.glucoseValue),
     unit:
@@ -39,14 +59,8 @@ function parseCreateData(body: Record<string, unknown>) {
         ? body.unit
         : undefined,
     measuredAt: parseDate(body.measuredAt),
-    context:
-      typeof body.context === "string"
-        ? body.context
-        : undefined,
-    notes:
-      typeof body.notes === "string"
-        ? body.notes
-        : undefined,
+    context: typeof body.context === "string" ? body.context : undefined,
+    notes: typeof body.notes === "string" ? body.notes : undefined,
   };
 }
 
@@ -55,8 +69,8 @@ function parseUpdateData(body: Record<string, unknown>) {
     glucoseValue?: number;
     unit?: string;
     measuredAt?: Date;
-    context?: string;
-    notes?: string;
+    context?: string | null;
+    notes?: string | null;
   } = {};
 
   if (body.glucoseValue !== undefined) {
@@ -78,11 +92,11 @@ function parseUpdateData(body: Record<string, unknown>) {
   }
 
   if (body.context !== undefined) {
-    if (typeof body.context !== "string") {
+    if (body.context !== null && typeof body.context !== "string") {
       throw new Error("Invalid glucose context");
     }
 
-    data.context = body.context;
+    data.context = body.context as string | null;
   }
 
   if (body.notes !== undefined) {
@@ -93,10 +107,7 @@ function parseUpdateData(body: Record<string, unknown>) {
       throw new Error("Invalid notes");
     }
 
-    data.notes =
-      body.notes === null
-        ? undefined
-        : body.notes;
+    data.notes = body.notes as string | null;
   }
 
   return data;
@@ -123,7 +134,7 @@ export async function createGlucoseReading(
   try {
     const userId = req.user!.userId;
 
-    const data = parseCreateData(req.body);
+    const data = parseCreateData(parseBody(req.body));
 
     const reading =
       await glucoseReadingService.createGlucoseReading(
@@ -138,7 +149,9 @@ export async function createGlucoseReading(
         error.message.includes("Glucose value") ||
         error.message.includes("date") ||
         error.message.includes("context") ||
-        error.message.includes("unit")
+        error.message.includes("unit") ||
+        error.message.includes("notes") ||
+        error.message.includes("Request body")
       ) {
         return res.status(400).json({
           message: error.message,
@@ -226,7 +239,7 @@ export async function updateGlucoseReading(
     const userId = req.user!.userId;
     const id = parseId(req.params.id);
 
-    const data = parseUpdateData(req.body);
+    const data = parseUpdateData(parseBody(req.body));
 
     const reading =
       await glucoseReadingService.updateGlucoseReading(
@@ -250,7 +263,8 @@ export async function updateGlucoseReading(
         error.message.includes("Glucose value") ||
         error.message.includes("date") ||
         error.message.includes("context") ||
-        error.message.includes("unit")
+        error.message.includes("unit") ||
+        error.message.includes("notes")
       ) {
         return res.status(400).json({
           message: error.message,
@@ -263,6 +277,14 @@ export async function updateGlucoseReading(
         return res.status(400).json({
           message: error.message,
         });
+      }
+
+      if (error.message === "Request body must be a JSON object") {
+        return res.status(400).json({ message: error.message });
+      }
+
+      if (error.message === "At least one reading field must be provided") {
+        return res.status(400).json({ message: error.message });
       }
     }
 

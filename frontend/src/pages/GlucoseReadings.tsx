@@ -132,7 +132,11 @@ export default function GlucoseReadings() {
       };
 
       if (editingId !== null) {
-        await updateGlucoseReading(editingId, data);
+        await updateGlucoseReading(editingId, {
+          ...data,
+          context: context || null,
+          notes: notes || null,
+        });
         setSuccess("Reading updated successfully.");
       } else {
         await createGlucoseReading(data);

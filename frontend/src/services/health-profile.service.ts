@@ -2,14 +2,14 @@ import { api } from "./api";
 import type { HealthProfile } from "../types/api";
 
 export interface HealthProfileData {
-  dateOfBirth?: string;
-  gender?: string;
-  height?: number;
-  weight?: number;
-  diabetesType?: string;
-  diagnosisDate?: string;
-  targetGlucoseMin?: number;
-  targetGlucoseMax?: number;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  diabetesType?: string | null;
+  diagnosisDate?: string | null;
+  targetGlucoseMin?: number | null;
+  targetGlucoseMax?: number | null;
 }
 
 export async function getHealthProfile(): Promise<HealthProfile> {

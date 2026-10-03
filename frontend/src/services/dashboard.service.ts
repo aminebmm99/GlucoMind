@@ -1,5 +1,7 @@
 import { api } from "./api";
 import type {
+  AnalyticsPeriod,
+  DashboardAnalytics,
   DashboardSummary,
   GlucoseReading,
 } from "../types/api";
@@ -13,7 +15,7 @@ export async function getDashboardSummary() {
 }
 
 export async function getDashboardPeriod(
-  period: "today" | "7d" | "30d",
+  period: AnalyticsPeriod,
 ) {
   const response = await api.get<{
     period: string;
@@ -25,6 +27,17 @@ export async function getDashboardPeriod(
   }>("/dashboard/period", {
     params: { period },
   });
+
+  return response.data;
+}
+
+export async function getDashboardAnalytics(
+  period: AnalyticsPeriod,
+): Promise<DashboardAnalytics> {
+  const response = await api.get<DashboardAnalytics>(
+    "/dashboard/analytics",
+    { params: { period } },
+  );
 
   return response.data;
 }

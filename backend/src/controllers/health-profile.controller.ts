@@ -4,12 +4,44 @@ import {
 } from "../middleware/auth.middleware";
 import * as healthProfileService from "../services/health-profile.service";
 
-function parseOptionalDate(value: unknown): Date | undefined {
-  if (value === undefined || value === null || value === "") {
+function parseBody(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Request body must be a JSON object");
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function parseOptionalDate(value: unknown): Date | null | undefined {
+  if (value === undefined) {
     return undefined;
   }
 
-  const date = new Date(String(value));
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error("Invalid date");
+  }
+
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const year = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]);
+    const day = Number(dateOnly[3]);
+    const calendarDate = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      calendarDate.getUTCFullYear() !== year ||
+      calendarDate.getUTCMonth() !== month - 1 ||
+      calendarDate.getUTCDate() !== day
+    ) {
+      throw new Error("Invalid date");
+    }
+  }
+
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     throw new Error("Invalid date");
@@ -18,9 +50,17 @@ function parseOptionalDate(value: unknown): Date | undefined {
   return date;
 }
 
-function parseOptionalNumber(value: unknown): number | undefined {
-  if (value === undefined || value === null || value === "") {
+function parseOptionalNumber(value: unknown): number | null | undefined {
+  if (value === undefined) {
     return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "number" && typeof value !== "string") {
+    throw new Error("Invalid number");
   }
 
   const number = Number(value);
@@ -32,19 +72,29 @@ function parseOptionalNumber(value: unknown): number | undefined {
   return number;
 }
 
+function parseOptionalString(value: unknown, message: string): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error(message);
+  }
+
+  return value;
+}
+
 function getHealthProfileData(body: Record<string, unknown>) {
   return {
     dateOfBirth: parseOptionalDate(body.dateOfBirth),
-    gender:
-      typeof body.gender === "string"
-        ? body.gender
-        : undefined,
+    gender: parseOptionalString(body.gender, "Invalid gender"),
     height: parseOptionalNumber(body.height),
     weight: parseOptionalNumber(body.weight),
-    diabetesType:
-      typeof body.diabetesType === "string"
-        ? body.diabetesType
-        : undefined,
+    diabetesType: parseOptionalString(body.diabetesType, "Invalid diabetes type"),
     diagnosisDate: parseOptionalDate(body.diagnosisDate),
     targetGlucoseMin: parseOptionalNumber(
       body.targetGlucoseMin,
@@ -88,7 +138,7 @@ export async function createHealthProfile(
   try {
     const userId = req.user!.userId;
 
-    const data = getHealthProfileData(req.body);
+    const data = getHealthProfileData(parseBody(req.body));
 
     const profile =
       await healthProfileService.createHealthProfile(
@@ -107,19 +157,7 @@ export async function createHealthProfile(
       });
     }
 
-    if (
-      error instanceof Error &&
-      error.message === "Invalid date"
-    ) {
-      return res.status(400).json({
-        message: error.message,
-      });
-    }
-
-    if (
-      error instanceof Error &&
-      error.message === "Invalid number"
-    ) {
+    if (isValidationError(error)) {
       return res.status(400).json({
         message: error.message,
       });
@@ -140,7 +178,7 @@ export async function updateHealthProfile(
   try {
     const userId = req.user!.userId;
 
-    const data = getHealthProfileData(req.body);
+    const data = getHealthProfileData(parseBody(req.body));
 
     const profile =
       await healthProfileService.updateHealthProfile(
@@ -159,19 +197,7 @@ export async function updateHealthProfile(
       });
     }
 
-    if (
-      error instanceof Error &&
-      error.message === "Invalid date"
-    ) {
-      return res.status(400).json({
-        message: error.message,
-      });
-    }
-
-    if (
-      error instanceof Error &&
-      error.message === "Invalid number"
-    ) {
+    if (isValidationError(error)) {
       return res.status(400).json({
         message: error.message,
       });
@@ -183,6 +209,27 @@ export async function updateHealthProfile(
       message: "Failed to update health profile",
     });
   }
+}
+
+function isValidationError(error: unknown): error is Error {
+  if (!(error instanceof Error)) return false;
+
+  return [
+    "Request body must be a JSON object",
+    "Invalid date",
+    "Invalid number",
+    "Invalid gender",
+    "Invalid diabetes type",
+    "Height must be greater than 0",
+    "Weight must be greater than 0",
+    "Target glucose minimum must be greater than 0",
+    "Target glucose maximum must be greater than 0",
+    "Target glucose minimum cannot exceed maximum",
+    "Date of birth cannot be in the future",
+    "Diagnosis date cannot be in the future",
+    "Diagnosis date cannot be before date of birth",
+    "At least one profile field must be provided",
+  ].includes(error.message);
 }
 
 export async function deleteHealthProfile(

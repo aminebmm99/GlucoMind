@@ -13,20 +13,20 @@ export async function findByUserId(userId: number) {
 export async function create(
   userId: number,
   data: {
-    dateOfBirth?: Date;
-    gender?: string;
-    height?: number;
-    weight?: number;
-    diabetesType?: string;
-    diagnosisDate?: Date;
-    targetGlucoseMin?: number;
-    targetGlucoseMax?: number;
+    dateOfBirth?: Date | null;
+    gender?: string | null;
+    height?: number | null;
+    weight?: number | null;
+    diabetesType?: string | null;
+    diagnosisDate?: Date | null;
+    targetGlucoseMin?: number | null;
+    targetGlucoseMax?: number | null;
   },
 ) {
   return prismaClient.healthProfile.create({
     data: {
-      userId,
       ...data,
+      userId,
     },
   });
 }
@@ -34,28 +34,22 @@ export async function create(
 export async function update(
   userId: number,
   data: {
-    dateOfBirth?: Date;
-    gender?: string;
-    height?: number;
-    weight?: number;
-    diabetesType?: string;
-    diagnosisDate?: Date;
-    targetGlucoseMin?: number;
-    targetGlucoseMax?: number;
+    dateOfBirth?: Date | null;
+    gender?: string | null;
+    height?: number | null;
+    weight?: number | null;
+    diabetesType?: string | null;
+    diagnosisDate?: Date | null;
+    targetGlucoseMin?: number | null;
+    targetGlucoseMax?: number | null;
   },
 ) {
-  return prismaClient.healthProfile.update({
-    where: {
-      userId,
-    },
+  return prismaClient.healthProfile.updateMany({
+    where: { userId },
     data,
   });
 }
 
 export async function remove(userId: number) {
-  return prismaClient.healthProfile.delete({
-    where: {
-      userId,
-    },
-  });
+  return prismaClient.healthProfile.deleteMany({ where: { userId } });
 }

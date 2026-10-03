@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import { normalizeGlucoseToMgDl } from "../utils/glucose-units";
 
 const glucoseReading = (prisma as any).glucoseReading;
 
@@ -10,35 +11,38 @@ export async function countReadings(userId: number) {
   });
 }
 
-export async function getAverageGlucose(userId: number) {
-  const result = await glucoseReading.aggregate({
-    where: {
-      userId,
-    },
-    _avg: {
-      glucoseValue: true,
-    },
+export async function getGlucoseStats(userId: number) {
+  const groups = await glucoseReading.groupBy({
+    by: ["unit"],
+    where: { userId },
+    _avg: { glucoseValue: true },
+    _min: { glucoseValue: true },
+    _max: { glucoseValue: true },
+    _count: { _all: true },
   });
 
-  return result._avg.glucoseValue;
-}
+  let total = 0;
+  let count = 0;
+  let minimumGlucose: number | null = null;
+  let maximumGlucose: number | null = null;
 
-export async function getMinMaxGlucose(userId: number) {
-  const result = await glucoseReading.aggregate({
-    where: {
-      userId,
-    },
-    _min: {
-      glucoseValue: true,
-    },
-    _max: {
-      glucoseValue: true,
-    },
-  });
+  for (const group of groups) {
+    const averageMgDl = normalizeGlucoseToMgDl(group._avg.glucoseValue, group.unit);
+    const minimumMgDl = normalizeGlucoseToMgDl(group._min.glucoseValue, group.unit);
+    const maximumMgDl = normalizeGlucoseToMgDl(group._max.glucoseValue, group.unit);
+    if (averageMgDl === null || minimumMgDl === null || maximumMgDl === null) continue;
+
+    const groupCount = group._count._all;
+    total += averageMgDl * groupCount;
+    count += groupCount;
+    minimumGlucose = minimumGlucose === null ? minimumMgDl : Math.min(minimumGlucose, minimumMgDl);
+    maximumGlucose = maximumGlucose === null ? maximumMgDl : Math.max(maximumGlucose, maximumMgDl);
+  }
 
   return {
-    minimumGlucose: result._min.glucoseValue,
-    maximumGlucose: result._max.glucoseValue,
+    averageGlucose: count === 0 ? null : total / count,
+    minimumGlucose,
+    maximumGlucose,
   };
 }
 

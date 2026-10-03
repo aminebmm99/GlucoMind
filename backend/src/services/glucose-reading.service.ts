@@ -4,8 +4,8 @@ export interface GlucoseReadingData {
   glucoseValue: number;
   unit?: string;
   measuredAt: Date;
-  context?: string;
-  notes?: string;
+  context?: string | null;
+  notes?: string | null;
 }
 
 const ALLOWED_CONTEXTS = [
@@ -69,23 +69,33 @@ export async function updateGlucoseReading(
 
   if (
     data.context !== undefined &&
+    data.context !== null &&
     !ALLOWED_CONTEXTS.includes(data.context)
   ) {
     throw new Error("Invalid glucose context");
   }
 
-  const existingReading =
-    await glucoseReadingRepository.findById(id, userId);
-
-  if (!existingReading) {
-    throw new Error("Glucose reading not found");
+  if (
+    data.unit !== undefined &&
+    data.unit !== "mg/dL" &&
+    data.unit !== "mmol/L"
+  ) {
+    throw new Error("Invalid glucose unit");
   }
 
-  await glucoseReadingRepository.update(
+  if (Object.keys(data).length === 0) {
+    throw new Error("At least one reading field must be provided");
+  }
+
+  const result = await glucoseReadingRepository.update(
     id,
     userId,
     data,
   );
+
+  if (result.count === 0) {
+    throw new Error("Glucose reading not found");
+  }
 
   return glucoseReadingRepository.findById(id, userId);
 }
@@ -94,14 +104,11 @@ export async function deleteGlucoseReading(
   id: number,
   userId: number,
 ) {
-  const existingReading =
-    await glucoseReadingRepository.findById(id, userId);
+  const result = await glucoseReadingRepository.remove(id, userId);
 
-  if (!existingReading) {
+  if (result.count === 0) {
     throw new Error("Glucose reading not found");
   }
-
-  await glucoseReadingRepository.remove(id, userId);
 }
 
 function validateGlucoseReading(
@@ -124,6 +131,7 @@ function validateGlucoseReading(
 
   if (
     data.context !== undefined &&
+    data.context !== null &&
     !ALLOWED_CONTEXTS.includes(data.context)
   ) {
     throw new Error("Invalid glucose context");

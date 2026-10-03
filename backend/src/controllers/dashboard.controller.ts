@@ -100,11 +100,12 @@ export async function getDashboardPeriod(
     if (
       period !== "today" &&
       period !== "7d" &&
+      period !== "14d" &&
       period !== "30d"
     ) {
       return res.status(400).json({
         message:
-          "Invalid period. Use today, 7d, or 30d",
+          "Invalid period. Use today, 7d, 14d, or 30d",
       });
     }
 

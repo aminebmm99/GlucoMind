@@ -1,23 +1,18 @@
 import * as dashboardRepository from "../repositories/dashboard.repository";
+import { normalizeGlucoseToMgDl } from "../utils/glucose-units";
 
 export async function getDashboardSummary(userId: number) {
-  const [
-    totalReadings,
-    averageGlucose,
-    minMax,
-    latestReading,
-  ] = await Promise.all([
+  const [totalReadings, stats, latestReading] = await Promise.all([
     dashboardRepository.countReadings(userId),
-    dashboardRepository.getAverageGlucose(userId),
-    dashboardRepository.getMinMaxGlucose(userId),
+    dashboardRepository.getGlucoseStats(userId),
     dashboardRepository.getLatestReading(userId),
   ]);
 
   return {
     totalReadings,
-    averageGlucose,
-    minimumGlucose: minMax.minimumGlucose,
-    maximumGlucose: minMax.maximumGlucose,
+    averageGlucose: stats.averageGlucose,
+    minimumGlucose: stats.minimumGlucose,
+    maximumGlucose: stats.maximumGlucose,
     latestReading,
   };
 }
@@ -35,7 +30,7 @@ export async function getDashboardReadings(
 
 export async function getDashboardPeriod(
   userId: number,
-  period: "today" | "7d" | "30d",
+  period: "today" | "7d" | "14d" | "30d",
 ) {
   const now = new Date();
   const from = new Date(now);
@@ -44,6 +39,8 @@ export async function getDashboardPeriod(
     from.setHours(0, 0, 0, 0);
   } else if (period === "7d") {
     from.setDate(from.getDate() - 7);
+  } else if (period === "14d") {
+    from.setDate(from.getDate() - 14);
   } else if (period === "30d") {
     from.setDate(from.getDate() - 30);
   }
@@ -65,12 +62,17 @@ export async function getDashboardPeriod(
     };
   }
 
-  const values = readings.map(
-    (reading: { glucoseValue: any; }) => reading.glucoseValue,
-  );
+  const values = readings.flatMap((reading: { glucoseValue: number; unit: string }) => {
+    const normalizedValue = normalizeGlucoseToMgDl(
+      reading.glucoseValue,
+      reading.unit,
+    );
+
+    return normalizedValue === null ? [] : [normalizedValue];
+  });
 
   const total = values.reduce(
-    (sum: any, value: any) => sum + value,
+    (sum: number, value: number) => sum + value,
     0,
   );
 

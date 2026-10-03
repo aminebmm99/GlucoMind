@@ -8,14 +8,15 @@ export async function create(
     glucoseValue: number;
     unit?: string;
     measuredAt: Date;
-    context?: string;
-    notes?: string;
+    context?: string | null;
+    notes?: string | null;
   },
 ) {
   return prismaClient.glucoseReading.create({
     data: {
-      userId,
       ...data,
+      // Keep ownership authoritative even if extra fields reach this layer.
+      userId,
     },
   });
 }
@@ -52,8 +53,8 @@ export async function update(
     glucoseValue?: number;
     unit?: string;
     measuredAt?: Date;
-    context?: string;
-    notes?: string;
+    context?: string | null;
+    notes?: string | null;
   },
 ) {
   return prismaClient.glucoseReading.updateMany({
